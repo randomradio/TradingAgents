@@ -31,7 +31,8 @@ def create_social_media_analyst(llm):
                     " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
                     " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
                     " You have access to the following tools: {tool_names}.\n{system_message}"
-                    "For your reference, the current date is {current_date}. The current company we want to analyze is {ticker}",
+                    "For your reference, the current date is {current_date}. The current company we want to analyze is {ticker}."
+                    " Market: {market_name}. Prices are in {currency}.",
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]
@@ -41,6 +42,8 @@ def create_social_media_analyst(llm):
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
         prompt = prompt.partial(current_date=current_date)
         prompt = prompt.partial(ticker=ticker)
+        prompt = prompt.partial(market_name=state.get("market_name", "US"))
+        prompt = prompt.partial(currency=state.get("currency", "$"))
 
         chain = prompt | llm.bind_tools(tools)
 

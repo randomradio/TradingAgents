@@ -218,6 +218,9 @@ class TradingAgentsGraph:
         self.log_states_dict[str(trade_date)] = {
             "company_of_interest": final_state["company_of_interest"],
             "trade_date": final_state["trade_date"],
+            "market": final_state.get("market", ""),
+            "market_name": final_state.get("market_name", ""),
+            "currency": final_state.get("currency", ""),
             "market_report": final_state["market_report"],
             "sentiment_report": final_state["sentiment_report"],
             "news_report": final_state["news_report"],

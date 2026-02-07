@@ -109,7 +109,10 @@ def _build_config(overrides: dict | None = None) -> dict:
 def _format_report(final_state: dict, decision: str, ticker: str, trade_date: str) -> str:
     """Format the analysis results into a readable Telegram report."""
     sections = []
-    sections.append(f"📊 *Analysis Report: {ticker} ({trade_date})*\n")
+    market_name = final_state.get("market_name", "")
+    currency = final_state.get("currency", "$")
+    market_label = f" [{market_name}]" if market_name else ""
+    sections.append(f"📊 *Analysis Report: {ticker}{market_label} ({trade_date})*\n")
 
     if final_state.get("market_report"):
         sections.append(f"📈 *Market Analysis*\n{final_state['market_report'][:800]}")
@@ -167,10 +170,13 @@ class TradingBot:
     async def cmd_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "👋 Welcome to *TradingAgents Bot*!\n\n"
-            "Send me a stock ticker to analyze. Examples:\n"
-            "  `NVDA`\n"
-            "  `US AAPL 2024-05-10`\n"
-            "  `TSLA 2025-01-15`\n\n"
+            "Send me a stock ticker to analyze. I support:\n"
+            "🇺🇸 *US stocks*: `NVDA`, `AAPL`, `TSLA`\n"
+            "🇨🇳 *China A-shares*: `600519`, `000001`\n"
+            "🇭🇰 *Hong Kong*: `0700`, `9988`\n\n"
+            "You can also specify a date:\n"
+            "  `AAPL 2024-05-10`\n"
+            "  `600519 2025-01-15`\n\n"
             "I'll run the full multi-agent analysis pipeline and send you a report "
             "with a BUY / HOLD / SELL recommendation.\n\n"
             "Commands:\n"

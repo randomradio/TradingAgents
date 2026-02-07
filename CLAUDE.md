@@ -24,6 +24,9 @@ TradingAgents/
 │   └── bot.py                       # TradingBot: message parsing, analysis, reporting
 ├── tradingagents/                   # Core package
 │   ├── default_config.py            # DEFAULT_CONFIG dict (LLMs, vendors, paths)
+│   ├── utils/                       # Shared utilities
+│   │   ├── __init__.py
+│   │   └── stock_utils.py           # StockUtils: market detection (US/CN/HK), ticker normalization
 │   ├── agents/                      # All agent definitions
 │   │   ├── __init__.py              # Re-exports all agent factory functions
 │   │   ├── analysts/                # 4 analyst agents
@@ -54,6 +57,7 @@ TradingAgents/
 │   ├── dataflows/                   # Data vendor abstraction layer
 │   │   ├── __init__.py
 │   │   ├── interface.py             # Vendor routing: VENDOR_METHODS, route_to_vendor()
+│   │   ├── akshare_provider.py      # AkShare: China A-share & HK market data
 │   │   ├── config.py               # Global config singleton (get_config/set_config)
 │   │   ├── y_finance.py            # yfinance implementations
 │   │   ├── yfin_utils.py           # yfinance helpers
@@ -143,6 +147,15 @@ Configured in `default_config.py` via two levels:
 - **Tool-level** (`tool_vendors`): Overrides for specific tools
 
 Categories: `core_stock_apis`, `technical_indicators`, `fundamental_data`, `news_data`
+
+### Multi-Market Support
+
+The framework supports **US**, **China A-shares**, and **Hong Kong** markets:
+- **Market detection** (`tradingagents/utils/stock_utils.py`): `StockUtils.identify_market()` detects market from ticker format (letters = US, 6 digits = China, 4-5 digits = HK)
+- **Auto-routing**: `route_to_vendor()` in `interface.py` automatically routes China tickers to the `akshare` vendor
+- **Market-aware state**: `AgentState` carries `market`, `market_name`, and `currency` fields through the pipeline
+- **Market-aware prompts**: All analyst prompts include market and currency context
+- **AkShare provider** (`dataflows/akshare_provider.py`): OHLCV, fundamentals, news, and indicators for China A-shares
 Vendors: `yfinance`, `alpha_vantage`, `openai`, `google`, `local`
 
 ### LLM Provider Support
