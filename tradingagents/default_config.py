@@ -9,10 +9,15 @@ DEFAULT_CONFIG = {
         "dataflows/data_cache",
     ),
     # LLM settings
-    "llm_provider": "openai",
+    "llm_provider": "openai",  # openai, anthropic, google, ollama, openrouter, custom
     "deep_think_llm": "o4-mini",
     "quick_think_llm": "gpt-4o-mini",
     "backend_url": "https://api.openai.com/v1",
+    "api_key": None,  # Explicit API key; if None, falls back to env vars (OPENAI_API_KEY, etc.)
+    # Embedding settings (for agent memory)
+    "embedding_model": None,  # None = auto-select based on provider
+    "embedding_base_url": None,  # None = same as backend_url
+    "embedding_api_key": None,  # None = same as api_key
     # Debate and discussion settings
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,

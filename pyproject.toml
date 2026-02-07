@@ -32,4 +32,5 @@ dependencies = [
     "tushare>=1.4.21",
     "typing-extensions>=4.14.0",
     "yfinance>=0.2.63",
+    "python-telegram-bot>=21.0",
 ]

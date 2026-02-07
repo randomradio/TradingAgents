@@ -19,6 +19,9 @@ TradingAgents/
 │   ├── models.py                    # Pydantic/Enum models (AnalystType)
 │   ├── utils.py                     # Interactive prompts (questionary)
 │   └── static/welcome.txt           # ASCII art welcome banner
+├── telegram_bot/                    # Telegram bot integration
+│   ├── __init__.py
+│   └── bot.py                       # TradingBot: message parsing, analysis, reporting
 ├── tradingagents/                   # Core package
 │   ├── default_config.py            # DEFAULT_CONFIG dict (LLMs, vendors, paths)
 │   ├── agents/                      # All agent definitions
@@ -148,8 +151,15 @@ The framework supports multiple LLM providers configured via `llm_provider`:
 - **OpenAI** (default): Uses `ChatOpenAI` — also used for OpenRouter and Ollama via `base_url`
 - **Anthropic**: Uses `ChatAnthropic`
 - **Google**: Uses `ChatGoogleGenerativeAI`
+- **Custom** (`"custom"`): Any OpenAI-compatible API — uses `ChatOpenAI` with explicit `base_url` and `api_key`
 
 Two LLM tiers: `deep_think_llm` (for judges/managers) and `quick_think_llm` (for analysts/debaters).
+
+API keys can be set via:
+1. **Config dict** (`api_key` field) — takes precedence
+2. **Environment variables** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.) — fallback
+
+Embedding model/endpoint for memory can be configured independently via `embedding_model`, `embedding_base_url`, and `embedding_api_key`.
 
 ## Development Workflows
 
@@ -175,6 +185,8 @@ Optional depending on provider/vendor:
 ```bash
 ANTHROPIC_API_KEY=...       # If using Anthropic provider
 GOOGLE_API_KEY=...          # If using Google provider
+TELEGRAM_BOT_TOKEN=...     # For Telegram bot integration
+TELEGRAM_ALLOWED_USERS=... # Comma-separated user IDs (empty = allow all)
 ```
 
 ### Running
@@ -185,6 +197,13 @@ python main.py
 
 # Interactive CLI
 python -m cli.main
+
+# Telegram bot
+export TELEGRAM_BOT_TOKEN=your_token_here
+python -m telegram_bot.bot
+
+# Telegram bot with custom LLM provider
+python -m telegram_bot.bot --backend-url https://api.example.com/v1 --api-key sk-xxx --quick-model gpt-4o-mini --deep-model o4-mini
 ```
 
 ### Testing
@@ -206,10 +225,14 @@ All settings live in `DEFAULT_CONFIG` dict (`tradingagents/default_config.py`):
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `llm_provider` | `"openai"` | LLM provider: openai, anthropic, google, ollama, openrouter |
+| `llm_provider` | `"openai"` | LLM provider: openai, anthropic, google, ollama, openrouter, custom |
 | `deep_think_llm` | `"o4-mini"` | Model for judges/managers (deep reasoning) |
 | `quick_think_llm` | `"gpt-4o-mini"` | Model for analysts/debaters (fast inference) |
 | `backend_url` | `"https://api.openai.com/v1"` | API endpoint URL |
+| `api_key` | `None` | Explicit API key (falls back to env vars if None) |
+| `embedding_model` | `None` | Embedding model name (auto-detected if None) |
+| `embedding_base_url` | `None` | Separate embedding endpoint (uses `backend_url` if None) |
+| `embedding_api_key` | `None` | Separate embedding API key (uses `api_key` if None) |
 | `max_debate_rounds` | `1` | Rounds of bull/bear debate |
 | `max_risk_discuss_rounds` | `1` | Rounds of risk management debate |
 | `max_recur_limit` | `100` | LangGraph recursion limit |
@@ -272,6 +295,7 @@ Key framework dependencies:
 - **pandas** / **stockstats**: Data manipulation and technical indicators
 - **praw** / **feedparser**: Reddit/RSS data sources
 - **requests**: HTTP calls for Alpha Vantage and other APIs
+- **python-telegram-bot**: Telegram bot integration
 
 ## Important Notes for AI Assistants
 
