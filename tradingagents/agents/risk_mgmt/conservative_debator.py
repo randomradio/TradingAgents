@@ -18,8 +18,10 @@ def create_safe_debator(llm):
         fundamentals_report = state["fundamentals_report"]
 
         trader_decision = state["trader_investment_plan"]
+        market_name = state.get("market_name", "US")
+        currency = state.get("currency", "$")
 
-        prompt = f"""As the Safe/Conservative Risk Analyst, your primary objective is to protect assets, minimize volatility, and ensure steady, reliable growth. You prioritize stability, security, and risk mitigation, carefully assessing potential losses, economic downturns, and market volatility. When evaluating the trader's decision or plan, critically examine high-risk elements, pointing out where the decision may expose the firm to undue risk and where more cautious alternatives could secure long-term gains. Here is the trader's decision:
+        prompt = f"""As the Safe/Conservative Risk Analyst for {state['company_of_interest']} on the {market_name} market, your primary objective is to protect assets, minimize volatility, and ensure steady, reliable growth. You prioritize stability, security, and risk mitigation, carefully assessing potential losses, economic downturns, and market volatility. Consider {market_name}-specific risks such as regulatory changes, currency exposure, and market structure. When evaluating the trader's decision or plan, critically examine high-risk elements, pointing out where the decision may expose the firm to undue risk and where more cautious alternatives could secure long-term gains. Here is the trader's decision:
 
 {trader_decision}
 

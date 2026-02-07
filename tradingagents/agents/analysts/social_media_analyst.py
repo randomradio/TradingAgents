@@ -10,14 +10,55 @@ def create_social_media_analyst(llm):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
         company_name = state["company_of_interest"]
+        market_name = state.get("market_name", "US")
+        currency = state.get("currency", "$")
 
         tools = [
             get_news,
         ]
 
         system_message = (
-            "You are a social media and company specific news researcher/analyst tasked with analyzing social media posts, recent company news, and public sentiment for a specific company over the past week. You will be given a company's name your objective is to write a comprehensive long report detailing your analysis, insights, and implications for traders and investors on this company's current state after looking at social media and what people are saying about that company, analyzing sentiment data of what people feel each day about the company, and looking at recent company news. Use the get_news(query, start_date, end_date) tool to search for company-specific news and social media discussions. Try to look at all sources possible from social media to sentiment to news. Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions."
-            + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read.""",
+            """You are a professional social media and sentiment analyst collaborating with other analysts.
+
+Your task: Analyze social media posts, public sentiment, and community discussions about {ticker} on the {market_name} market.
+
+**Workflow:**
+1. Call `get_news(ticker, start_date, end_date)` to search for company-specific social media discussions and news
+2. Analyze the tone, volume, and trends in public sentiment
+3. Generate a comprehensive sentiment analysis report
+
+**Report format (use these exact section headers):**
+
+## Social Media Overview
+- Key platforms and sources analyzed
+- Volume of mentions / discussions over the past week
+- Trending topics and hashtags related to {ticker}
+
+## Sentiment Analysis
+- Overall sentiment score: Bullish / Neutral / Bearish
+- Day-by-day sentiment trend over the past week
+- Key positive narratives (with quotes/examples)
+- Key negative narratives (with quotes/examples)
+- Sentiment shift detection (any sudden changes)
+
+## Community & Institutional Signals
+- Retail investor sentiment (Reddit, StockTwits, forums)
+- Analyst commentary trends
+- Short interest and options flow signals (if mentioned in news)
+
+## Sentiment Assessment
+- How social sentiment aligns with or diverges from fundamentals
+- Key catalysts driving public opinion
+- Risk of sentiment-driven volatility
+- Overall social sentiment outlook: Positive / Neutral / Negative
+
+Append a summary table with key sentiment indicators and their readings.
+
+**Important:**
+- Cite specific sources, dates, and quotes where possible
+- Consider {market_name} market-specific social media platforms and sentiment patterns
+- Do NOT use 'FINAL TRANSACTION PROPOSAL' prefix — the final decision is made by other agents
+- Do not simply state trends are mixed; provide fine-grained analysis"""
         )
 
         prompt = ChatPromptTemplate.from_messages(
@@ -30,9 +71,7 @@ def create_social_media_analyst(llm):
                     " will help where you left off. Execute what you can to make progress."
                     " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
                     " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    " You have access to the following tools: {tool_names}.\n{system_message}"
-                    "For your reference, the current date is {current_date}. The current company we want to analyze is {ticker}."
-                    " Market: {market_name}. Prices are in {currency}.",
+                    " You have access to the following tools: {tool_names}.\n{system_message}",
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]
@@ -42,8 +81,8 @@ def create_social_media_analyst(llm):
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
         prompt = prompt.partial(current_date=current_date)
         prompt = prompt.partial(ticker=ticker)
-        prompt = prompt.partial(market_name=state.get("market_name", "US"))
-        prompt = prompt.partial(currency=state.get("currency", "$"))
+        prompt = prompt.partial(market_name=market_name)
+        prompt = prompt.partial(currency=currency)
 
         chain = prompt | llm.bind_tools(tools)
 
