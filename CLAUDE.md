@@ -120,7 +120,7 @@ The system follows a **5-stage sequential pipeline**, orchestrated as a LangGrap
 
 ### Memory System
 
-Uses **ChromaDB** (in-memory) with **OpenAI embeddings** for similarity-based memory retrieval. Each agent type has its own `FinancialSituationMemory` collection. The `reflect_and_remember()` method stores lessons learned from trade outcomes.
+Uses **ChromaDB** (in-memory) with **local embeddings** (all-MiniLM-L6-v2 via ONNX, bundled with ChromaDB) for similarity-based memory retrieval. No API keys or network calls needed for embeddings. Each agent type has its own `FinancialSituationMemory` collection. The `reflect_and_remember()` method stores lessons learned from trade outcomes.
 
 ## Key Patterns & Conventions
 
@@ -172,7 +172,7 @@ API keys can be set via:
 1. **Config dict** (`api_key` field) — takes precedence
 2. **Environment variables** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.) — fallback
 
-Embedding model/endpoint for memory can be configured independently via `embedding_model`, `embedding_base_url`, and `embedding_api_key`.
+Embeddings for agent memory run locally via ChromaDB's built-in ONNX model (all-MiniLM-L6-v2). No API keys or network calls needed.
 
 ## Development Workflows
 
@@ -243,9 +243,6 @@ All settings live in `DEFAULT_CONFIG` dict (`tradingagents/default_config.py`):
 | `quick_think_llm` | `"gpt-4o-mini"` | Model for analysts/debaters (fast inference) |
 | `backend_url` | `"https://api.openai.com/v1"` | API endpoint URL |
 | `api_key` | `None` | Explicit API key (falls back to env vars if None) |
-| `embedding_model` | `None` | Embedding model name (auto-detected if None) |
-| `embedding_base_url` | `None` | Separate embedding endpoint (uses `backend_url` if None) |
-| `embedding_api_key` | `None` | Separate embedding API key (uses `api_key` if None) |
 | `max_debate_rounds` | `1` | Rounds of bull/bear debate |
 | `max_risk_discuss_rounds` | `1` | Rounds of risk management debate |
 | `max_recur_limit` | `100` | LangGraph recursion limit |

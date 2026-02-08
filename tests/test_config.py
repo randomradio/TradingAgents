@@ -14,9 +14,6 @@ class TestDefaultConfig:
             "quick_think_llm",
             "backend_url",
             "api_key",
-            "embedding_model",
-            "embedding_base_url",
-            "embedding_api_key",
             "max_debate_rounds",
             "max_risk_discuss_rounds",
             "max_recur_limit",
@@ -36,12 +33,6 @@ class TestDefaultConfig:
     def test_api_key_none_by_default(self):
         from tradingagents.default_config import DEFAULT_CONFIG
         assert DEFAULT_CONFIG["api_key"] is None
-
-    def test_embedding_fields_none_by_default(self):
-        from tradingagents.default_config import DEFAULT_CONFIG
-        assert DEFAULT_CONFIG["embedding_model"] is None
-        assert DEFAULT_CONFIG["embedding_base_url"] is None
-        assert DEFAULT_CONFIG["embedding_api_key"] is None
 
     def test_data_vendors_structure(self):
         from tradingagents.default_config import DEFAULT_CONFIG

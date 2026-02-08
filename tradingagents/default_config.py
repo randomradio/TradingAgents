@@ -14,10 +14,6 @@ DEFAULT_CONFIG = {
     "quick_think_llm": os.getenv("TRADINGAGENTS_QUICK_THINK_LLM", "gpt-4o-mini"),
     "backend_url": os.getenv("TRADINGAGENTS_BASE_URL", "https://api.openai.com/v1"),
     "api_key": os.getenv("TRADINGAGENTS_API_KEY"),  # Explicit API key; if None, falls back to env vars (OPENAI_API_KEY, etc.)
-    # Embedding settings (for agent memory)
-    "embedding_model": os.getenv("TRADINGAGENTS_EMBEDDING_MODEL"),  # None = auto-select based on provider
-    "embedding_base_url": os.getenv("TRADINGAGENTS_EMBEDDING_BASE_URL"),  # None = same as backend_url
-    "embedding_api_key": os.getenv("TRADINGAGENTS_EMBEDDING_API_KEY"),  # None = same as api_key
     # Debate and discussion settings
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,
