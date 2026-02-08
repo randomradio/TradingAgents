@@ -1,6 +1,11 @@
+import os
+
 import chromadb
 from chromadb.config import Settings
 from openai import OpenAI
+
+# Default OpenAI embeddings endpoint
+_OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
 class FinancialSituationMemory:
@@ -13,9 +18,27 @@ class FinancialSituationMemory:
         else:
             self.embedding = "text-embedding-3-small"
 
-        # Embedding endpoint: separate config or fall back to LLM backend
-        embedding_base_url = config.get("embedding_base_url") or config["backend_url"]
-        embedding_api_key = config.get("embedding_api_key") or config.get("api_key")
+        # Embedding endpoint: separate config > LLM backend (only when provider
+        # is standard OpenAI) > OpenAI default.
+        #
+        # When the user configures a custom/non-OpenAI LLM provider (e.g.
+        # DeepSeek, Groq) but does NOT set explicit embedding config, we must
+        # NOT send the OpenAI embedding request to the custom provider — it
+        # won't serve text-embedding-3-small.  Fall back to the OpenAI API
+        # using OPENAI_API_KEY from the environment instead.
+        embedding_base_url = config.get("embedding_base_url")
+        embedding_api_key = config.get("embedding_api_key")
+
+        if not embedding_base_url:
+            provider = config.get("llm_provider", "openai").lower()
+            if provider == "openai":
+                # Standard OpenAI — safe to reuse the LLM backend/key
+                embedding_base_url = config["backend_url"]
+                embedding_api_key = embedding_api_key or config.get("api_key")
+            else:
+                # Custom / non-OpenAI provider — fall back to OpenAI for embeddings
+                embedding_base_url = _OPENAI_BASE_URL
+                embedding_api_key = embedding_api_key or os.getenv("OPENAI_API_KEY")
 
         client_kwargs = {"base_url": embedding_base_url}
         if embedding_api_key:
