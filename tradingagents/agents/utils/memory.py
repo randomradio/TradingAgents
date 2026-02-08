@@ -1,37 +1,22 @@
 import chromadb
 from chromadb.config import Settings
-from openai import OpenAI
+from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
 
 class FinancialSituationMemory:
-    def __init__(self, name, config):
-        # Determine embedding model: explicit config > auto-detect by provider
-        if config.get("embedding_model"):
-            self.embedding = config["embedding_model"]
-        elif config["backend_url"] == "http://localhost:11434/v1":
-            self.embedding = "nomic-embed-text"
-        else:
-            self.embedding = "text-embedding-3-small"
-
-        # Embedding endpoint: separate config or fall back to LLM backend
-        embedding_base_url = config.get("embedding_base_url") or config["backend_url"]
-        embedding_api_key = config.get("embedding_api_key") or config.get("api_key")
-
-        client_kwargs = {"base_url": embedding_base_url}
-        if embedding_api_key:
-            client_kwargs["api_key"] = embedding_api_key
-        self.client = OpenAI(**client_kwargs)
+    def __init__(self, name, config=None):
+        # Use ChromaDB's built-in embedding function (all-MiniLM-L6-v2 via ONNX).
+        # Runs locally — no API keys or network calls required.
+        self.embedding_fn = DefaultEmbeddingFunction()
 
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
-        self.situation_collection = self.chroma_client.create_collection(name=name)
+        self.situation_collection = self.chroma_client.create_collection(
+            name=name, embedding_function=self.embedding_fn
+        )
 
     def get_embedding(self, text):
-        """Get OpenAI embedding for a text"""
-        
-        response = self.client.embeddings.create(
-            model=self.embedding, input=text
-        )
-        return response.data[0].embedding
+        """Get embedding for a text using the local model."""
+        return self.embedding_fn([text])[0]
 
     def add_situations(self, situations_and_advice):
         """Add financial situations and their corresponding advice. Parameter is a list of tuples (situation, rec)"""
@@ -57,7 +42,7 @@ class FinancialSituationMemory:
         )
 
     def get_memories(self, current_situation, n_matches=1):
-        """Find matching recommendations using OpenAI embeddings"""
+        """Find matching recommendations using embeddings"""
         query_embedding = self.get_embedding(current_situation)
 
         results = self.situation_collection.query(
@@ -81,7 +66,7 @@ class FinancialSituationMemory:
 
 if __name__ == "__main__":
     # Example usage
-    matcher = FinancialSituationMemory()
+    matcher = FinancialSituationMemory("example")
 
     # Example data
     example_data = [
@@ -108,7 +93,7 @@ if __name__ == "__main__":
 
     # Example query
     current_situation = """
-    Market showing increased volatility in tech sector, with institutional investors 
+    Market showing increased volatility in tech sector, with institutional investors
     reducing positions and rising interest rates affecting growth stock valuations
     """
 
