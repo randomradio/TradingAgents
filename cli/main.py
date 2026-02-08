@@ -467,22 +467,43 @@ def get_user_selections():
     )
     selected_research_depth = select_research_depth()
 
-    # Step 5: LLM provider
-    console.print(
-        create_question_box(
-            "Step 5: LLM Provider", "Select which service to talk to"
+    # Steps 5-6: LLM provider and model selection
+    # Skip interactive prompts if configured via environment variables
+    import os
+    if os.getenv("TRADINGAGENTS_LLM_PROVIDER"):
+        selected_llm_provider = DEFAULT_CONFIG["llm_provider"]
+        backend_url = DEFAULT_CONFIG["backend_url"]
+        api_key = DEFAULT_CONFIG.get("api_key")
+        selected_shallow_thinker = DEFAULT_CONFIG["quick_think_llm"]
+        selected_deep_thinker = DEFAULT_CONFIG["deep_think_llm"]
+        console.print(
+            Panel(
+                f"[bold]LLM Provider:[/bold] {selected_llm_provider}\n"
+                f"[bold]Base URL:[/bold] {backend_url}\n"
+                f"[bold]Quick model:[/bold] {selected_shallow_thinker}\n"
+                f"[bold]Deep model:[/bold] {selected_deep_thinker}",
+                title="Steps 5-6: Using .env configuration",
+                border_style="green",
+                padding=(1, 2),
+            )
         )
-    )
-    selected_llm_provider, backend_url, api_key = select_llm_provider()
+    else:
+        # Step 5: LLM provider
+        console.print(
+            create_question_box(
+                "Step 5: LLM Provider", "Select which service to talk to"
+            )
+        )
+        selected_llm_provider, backend_url, api_key = select_llm_provider()
 
-    # Step 6: Thinking agents
-    console.print(
-        create_question_box(
-            "Step 6: Thinking Agents", "Select your thinking agents for analysis"
+        # Step 6: Thinking agents
+        console.print(
+            create_question_box(
+                "Step 6: Thinking Agents", "Select your thinking agents for analysis"
+            )
         )
-    )
-    selected_shallow_thinker = select_shallow_thinking_agent(selected_llm_provider)
-    selected_deep_thinker = select_deep_thinking_agent(selected_llm_provider)
+        selected_shallow_thinker = select_shallow_thinking_agent(selected_llm_provider)
+        selected_deep_thinker = select_deep_thinking_agent(selected_llm_provider)
 
     return {
         "ticker": selected_ticker,
