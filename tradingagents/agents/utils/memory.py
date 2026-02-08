@@ -5,11 +5,23 @@ from openai import OpenAI
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
-        if config["backend_url"] == "http://localhost:11434/v1":
+        # Determine embedding model: explicit config > auto-detect by provider
+        if config.get("embedding_model"):
+            self.embedding = config["embedding_model"]
+        elif config["backend_url"] == "http://localhost:11434/v1":
             self.embedding = "nomic-embed-text"
         else:
             self.embedding = "text-embedding-3-small"
-        self.client = OpenAI(base_url=config["backend_url"])
+
+        # Embedding endpoint: separate config or fall back to LLM backend
+        embedding_base_url = config.get("embedding_base_url") or config["backend_url"]
+        embedding_api_key = config.get("embedding_api_key") or config.get("api_key")
+
+        client_kwargs = {"base_url": embedding_base_url}
+        if embedding_api_key:
+            client_kwargs["api_key"] = embedding_api_key
+        self.client = OpenAI(**client_kwargs)
+
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
         self.situation_collection = self.chroma_client.create_collection(name=name)
 

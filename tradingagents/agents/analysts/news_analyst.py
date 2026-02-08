@@ -9,6 +9,8 @@ def create_news_analyst(llm):
     def news_analyst_node(state):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
+        market_name = state.get("market_name", "US")
+        currency = state.get("currency", "$")
 
         tools = [
             get_news,
@@ -16,8 +18,47 @@ def create_news_analyst(llm):
         ]
 
         system_message = (
-            "You are a news researcher tasked with analyzing recent news and trends over the past week. Please write a comprehensive report of the current state of the world that is relevant for trading and macroeconomics. Use the available tools: get_news(query, start_date, end_date) for company-specific or targeted news searches, and get_global_news(curr_date, look_back_days, limit) for broader macroeconomic news. Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions."
-            + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."""
+            """You are a professional news and macro analyst collaborating with other analysts.
+
+Your task: Analyze recent news, geopolitical events, and macroeconomic conditions relevant to {ticker} on the {market_name} market.
+
+**Workflow:**
+1. Call `get_news(ticker, start_date, end_date)` for company-specific news
+2. Call `get_global_news(curr_date, look_back_days, limit)` for macro/global news
+3. Generate a comprehensive news analysis report
+
+**Report format (use these exact section headers):**
+
+## Company-Specific News
+- Major news events in the past week affecting {ticker}
+- Earnings announcements, product launches, management changes
+- Regulatory or legal developments
+- Analyst upgrades/downgrades
+
+## Macroeconomic Environment
+- Central bank policy / interest rate outlook
+- Inflation data and economic indicators
+- Trade policy and geopolitical tensions
+- Sector-specific trends affecting {ticker}'s industry
+
+## Market Sentiment
+- Overall market mood (risk-on / risk-off)
+- Sector rotation trends
+- Institutional vs retail positioning signals
+
+## News Impact Assessment
+- Key positive catalysts (ranked by importance)
+- Key negative catalysts (ranked by importance)
+- Overall news sentiment: Positive / Neutral / Negative
+- Expected near-term impact on {ticker} stock price
+
+Append a summary table with key news events and their expected impact.
+
+**Important:**
+- Focus on {market_name} market-specific context and regulations
+- Reference specific dates, sources, and data points
+- Do NOT use 'FINAL TRANSACTION PROPOSAL' prefix — the final decision is made by other agents
+- Do not simply state trends are mixed; provide fine-grained analysis"""
         )
 
         prompt = ChatPromptTemplate.from_messages(
@@ -30,8 +71,7 @@ def create_news_analyst(llm):
                     " will help where you left off. Execute what you can to make progress."
                     " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
                     " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    " You have access to the following tools: {tool_names}.\n{system_message}"
-                    "For your reference, the current date is {current_date}. We are looking at the company {ticker}",
+                    " You have access to the following tools: {tool_names}.\n{system_message}",
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]
@@ -41,6 +81,8 @@ def create_news_analyst(llm):
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
         prompt = prompt.partial(current_date=current_date)
         prompt = prompt.partial(ticker=ticker)
+        prompt = prompt.partial(market_name=market_name)
+        prompt = prompt.partial(currency=currency)
 
         chain = prompt | llm.bind_tools(tools)
         result = chain.invoke(state["messages"])

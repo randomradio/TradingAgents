@@ -10,6 +10,8 @@ def create_fundamentals_analyst(llm):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
         company_name = state["company_of_interest"]
+        market_name = state.get("market_name", "US")
+        currency = state.get("currency", "$")
 
         tools = [
             get_fundamentals,
@@ -19,9 +21,57 @@ def create_fundamentals_analyst(llm):
         ]
 
         system_message = (
-            "You are a researcher tasked with analyzing fundamental information over the past week about a company. Please write a comprehensive report of the company's fundamental information such as financial documents, company profile, basic company financials, and company financial history to gain a full view of the company's fundamental information to inform traders. Make sure to include as much detail as possible. Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions."
-            + " Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."
-            + " Use the available tools: `get_fundamentals` for comprehensive company analysis, `get_balance_sheet`, `get_cashflow`, and `get_income_statement` for specific financial statements.",
+            """You are a professional fundamentals analyst collaborating with other analysts.
+
+Your task: Analyze the fundamental financial health of {ticker} on the {market_name} market.
+
+**Workflow:**
+1. Call `get_fundamentals` for a comprehensive company overview (key ratios, valuation metrics)
+2. Call `get_balance_sheet`, `get_cashflow`, and `get_income_statement` for detailed financial statements
+3. Generate a comprehensive fundamental analysis report
+
+**Report format (use these exact section headers):**
+
+## Company Overview
+- Ticker: {ticker}
+- Market: {market_name}
+- Analysis Date: {current_date}
+- Market Cap, Sector/Industry, Key Business Description
+
+## Valuation Analysis
+- P/E Ratio (TTM and Forward)
+- P/B Ratio
+- EV/EBITDA
+- PEG Ratio (if available)
+- Comparison to sector averages
+- Assessment: Overvalued / Fairly Valued / Undervalued
+
+## Financial Health
+- Revenue trend (YoY growth)
+- Net income / profit margins
+- Debt-to-equity ratio
+- Current ratio / quick ratio
+- Free cash flow trend
+- ROE, ROA
+
+## Growth & Competitive Position
+- Revenue growth trajectory
+- Earnings growth trajectory
+- Competitive advantages (moat)
+- Key risks and challenges
+
+## Fundamental Assessment
+- Overall fundamental outlook: Strong / Moderate / Weak
+- Key factors driving the assessment
+- Fair value estimate (in {currency}) if data supports it
+
+Append a summary table at the end with key financial metrics.
+
+**Important:**
+- All monetary values in {currency}
+- Include specific numbers from the financial statements
+- Do NOT use 'FINAL TRANSACTION PROPOSAL' prefix — the final decision is made by other agents
+- Do not simply state the fundamentals are mixed; provide fine-grained analysis"""
         )
 
         prompt = ChatPromptTemplate.from_messages(
@@ -34,8 +84,7 @@ def create_fundamentals_analyst(llm):
                     " will help where you left off. Execute what you can to make progress."
                     " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
                     " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    " You have access to the following tools: {tool_names}.\n{system_message}"
-                    "For your reference, the current date is {current_date}. The company we want to look at is {ticker}",
+                    " You have access to the following tools: {tool_names}.\n{system_message}",
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]
@@ -45,6 +94,8 @@ def create_fundamentals_analyst(llm):
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
         prompt = prompt.partial(current_date=current_date)
         prompt = prompt.partial(ticker=ticker)
+        prompt = prompt.partial(market_name=market_name)
+        prompt = prompt.partial(currency=currency)
 
         chain = prompt | llm.bind_tools(tools)
 

@@ -16,6 +16,16 @@ from .alpha_vantage import (
     get_news as get_alpha_vantage_news
 )
 from .alpha_vantage_common import AlphaVantageRateLimitError
+from .akshare_provider import (
+    get_china_stock_data,
+    get_hk_stock_data,
+    get_china_fundamentals,
+    get_china_balance_sheet,
+    get_china_cashflow,
+    get_china_income_statement,
+    get_china_stock_news,
+    get_china_indicators,
+)
 
 # Configuration and routing logic
 from .config import get_config
@@ -58,7 +68,8 @@ VENDOR_LIST = [
     "local",
     "yfinance",
     "openai",
-    "google"
+    "google",
+    "akshare",
 ]
 
 # Mapping of methods to their vendor-specific implementations
@@ -68,32 +79,38 @@ VENDOR_METHODS = {
         "alpha_vantage": get_alpha_vantage_stock,
         "yfinance": get_YFin_data_online,
         "local": get_YFin_data,
+        "akshare": get_china_stock_data,
     },
     # technical_indicators
     "get_indicators": {
         "alpha_vantage": get_alpha_vantage_indicator,
         "yfinance": get_stock_stats_indicators_window,
-        "local": get_stock_stats_indicators_window
+        "local": get_stock_stats_indicators_window,
+        "akshare": get_china_indicators,
     },
     # fundamental_data
     "get_fundamentals": {
         "alpha_vantage": get_alpha_vantage_fundamentals,
         "openai": get_fundamentals_openai,
+        "akshare": get_china_fundamentals,
     },
     "get_balance_sheet": {
         "alpha_vantage": get_alpha_vantage_balance_sheet,
         "yfinance": get_yfinance_balance_sheet,
         "local": get_simfin_balance_sheet,
+        "akshare": get_china_balance_sheet,
     },
     "get_cashflow": {
         "alpha_vantage": get_alpha_vantage_cashflow,
         "yfinance": get_yfinance_cashflow,
         "local": get_simfin_cashflow,
+        "akshare": get_china_cashflow,
     },
     "get_income_statement": {
         "alpha_vantage": get_alpha_vantage_income_statement,
         "yfinance": get_yfinance_income_statement,
         "local": get_simfin_income_statements,
+        "akshare": get_china_income_statement,
     },
     # news_data
     "get_news": {
@@ -101,6 +118,7 @@ VENDOR_METHODS = {
         "openai": get_stock_news_openai,
         "google": get_google_news,
         "local": [get_finnhub_news, get_reddit_company_news, get_google_news],
+        "akshare": get_china_stock_news,
     },
     "get_global_news": {
         "openai": get_global_news_openai,
@@ -138,10 +156,38 @@ def get_vendor(category: str, method: str = None) -> str:
     # Fall back to category-level configuration
     return config.get("data_vendors", {}).get(category, "default")
 
+def _detect_market_vendor(method: str, args) -> str | None:
+    """Auto-detect if a China/HK ticker is being queried and route to akshare.
+
+    Returns 'akshare' if the first arg looks like a China A-share ticker,
+    None otherwise (let the normal config decide).
+    """
+    if not args:
+        return None
+    ticker = str(args[0]).strip()
+    # Only override for methods that have akshare implementations
+    if method not in VENDOR_METHODS or "akshare" not in VENDOR_METHODS[method]:
+        return None
+    try:
+        from tradingagents.utils.stock_utils import StockUtils, StockMarket
+        market = StockUtils.identify_market(ticker)
+        if market == StockMarket.CHINA:
+            return "akshare"
+    except ImportError:
+        pass
+    return None
+
+
 def route_to_vendor(method: str, *args, **kwargs):
     """Route method calls to appropriate vendor implementation with fallback support."""
     category = get_category_for_method(method)
-    vendor_config = get_vendor(category, method)
+
+    # Auto-detect market and override vendor for China stocks
+    market_vendor = _detect_market_vendor(method, args)
+    if market_vendor:
+        vendor_config = market_vendor
+    else:
+        vendor_config = get_vendor(category, method)
 
     # Handle comma-separated vendors
     primary_vendors = [v.strip() for v in vendor_config.split(',')]

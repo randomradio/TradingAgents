@@ -125,6 +125,17 @@ def select_research_depth() -> int:
 def select_shallow_thinking_agent(provider) -> str:
     """Select shallow thinking llm engine using an interactive selection."""
 
+    # For custom providers, prompt for free-text model name
+    if provider.lower() == "custom":
+        model = questionary.text(
+            "Enter the quick-thinking model name (e.g. gpt-4o-mini):",
+            validate=lambda x: len(x.strip()) > 0 or "Please enter a model name.",
+        ).ask()
+        if not model:
+            console.print("\n[red]No model name provided. Exiting...[/red]")
+            exit(1)
+        return model.strip()
+
     # Define shallow thinking llm engine options with their corresponding model names
     SHALLOW_AGENT_OPTIONS = {
         "openai": [
@@ -183,6 +194,17 @@ def select_shallow_thinking_agent(provider) -> str:
 def select_deep_thinking_agent(provider) -> str:
     """Select deep thinking llm engine using an interactive selection."""
 
+    # For custom providers, prompt for free-text model name
+    if provider.lower() == "custom":
+        model = questionary.text(
+            "Enter the deep-thinking model name (e.g. o4-mini):",
+            validate=lambda x: len(x.strip()) > 0 or "Please enter a model name.",
+        ).ask()
+        if not model:
+            console.print("\n[red]No model name provided. Exiting...[/red]")
+            exit(1)
+        return model.strip()
+
     # Define deep thinking llm engine options with their corresponding model names
     DEEP_AGENT_OPTIONS = {
         "openai": [
@@ -239,17 +261,18 @@ def select_deep_thinking_agent(provider) -> str:
 
     return choice
 
-def select_llm_provider() -> tuple[str, str]:
-    """Select the OpenAI api url using interactive selection."""
-    # Define OpenAI api options with their corresponding endpoints
+def select_llm_provider() -> tuple[str, str, str]:
+    """Select the LLM provider. Returns (provider_name, base_url, api_key_or_None)."""
+    # Define provider options with their corresponding endpoints
     BASE_URLS = [
         ("OpenAI", "https://api.openai.com/v1"),
         ("Anthropic", "https://api.anthropic.com/"),
         ("Google", "https://generativelanguage.googleapis.com/v1"),
         ("Openrouter", "https://openrouter.ai/api/v1"),
-        ("Ollama", "http://localhost:11434/v1"),        
+        ("Ollama", "http://localhost:11434/v1"),
+        ("Custom (OpenAI-compatible)", None),
     ]
-    
+
     choice = questionary.select(
         "Select your LLM Provider:",
         choices=[
@@ -265,12 +288,33 @@ def select_llm_provider() -> tuple[str, str]:
             ]
         ),
     ).ask()
-    
+
     if choice is None:
-        console.print("\n[red]no OpenAI backend selected. Exiting...[/red]")
+        console.print("\n[red]No LLM provider selected. Exiting...[/red]")
         exit(1)
-    
+
     display_name, url = choice
+    api_key = None
+
+    if url is None:
+        # Custom provider: prompt for base URL and API key
+        url = questionary.text(
+            "Enter the API base URL (e.g. https://api.example.com/v1):",
+            validate=lambda x: len(x.strip()) > 0 or "Please enter a valid URL.",
+        ).ask()
+        if not url:
+            console.print("\n[red]No URL provided. Exiting...[/red]")
+            exit(1)
+        url = url.strip()
+
+        api_key = questionary.password(
+            "Enter the API key (leave empty to use OPENAI_API_KEY env var):",
+        ).ask()
+        if api_key is not None:
+            api_key = api_key.strip() or None
+
+        display_name = "Custom"
+
     print(f"You selected: {display_name}\tURL: {url}")
-    
-    return display_name, url
+
+    return display_name, url, api_key
