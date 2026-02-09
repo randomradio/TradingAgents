@@ -9,11 +9,13 @@ DEFAULT_CONFIG = {
         "dataflows/data_cache",
     ),
     # LLM settings (all overridable via environment variables)
-    "llm_provider": os.getenv("TRADINGAGENTS_LLM_PROVIDER", "openai"),  # openai, anthropic, google, ollama, openrouter, custom
+    "llm_provider": os.getenv("TRADINGAGENTS_LLM_PROVIDER", "openai"),  # openai, anthropic, google, ollama, openrouter, custom, deepseek
     "deep_think_llm": os.getenv("TRADINGAGENTS_DEEP_THINK_LLM", "o4-mini"),
     "quick_think_llm": os.getenv("TRADINGAGENTS_QUICK_THINK_LLM", "gpt-4o-mini"),
     "backend_url": os.getenv("TRADINGAGENTS_BASE_URL", "https://api.openai.com/v1"),
     "api_key": os.getenv("TRADINGAGENTS_API_KEY"),  # Explicit API key; if None, falls back to env vars (OPENAI_API_KEY, etc.)
+    # Use new LLM provider layer with direct API calls (supports DeepSeek reasoning_content, etc.)
+    "use_new_llm_provider": os.getenv("TRADINGAGENTS_USE_NEW_LLM_PROVIDER", "false").lower() == "true",
     # Embedding settings (for agent memory)
     "embedding_model": os.getenv("TRADINGAGENTS_EMBEDDING_MODEL"),  # None = auto-select based on provider
     "embedding_base_url": os.getenv("TRADINGAGENTS_EMBEDDING_BASE_URL"),  # None = same as backend_url

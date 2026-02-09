@@ -15,6 +15,9 @@ from langgraph.prebuilt import ToolNode
 from tradingagents.agents import *
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.agents.utils.memory import FinancialSituationMemory
+
+# Import the new LLM provider abstraction layer
+from tradingagents.llm_providers import create_llm_provider
 from tradingagents.agents.utils.agent_states import (
     AgentState,
     InvestDebateState,
@@ -72,38 +75,58 @@ class TradingAgentsGraph:
         )
 
         # Initialize LLMs
+        # Use new provider abstraction layer or fall back to LangChain for compatibility
         provider = self.config["llm_provider"].lower()
         api_key = self.config.get("api_key")
 
-        if provider in ("openai", "ollama", "openrouter", "custom"):
-            llm_kwargs = {
-                "model": self.config["deep_think_llm"],
-                "base_url": self.config["backend_url"],
-            }
-            if api_key:
-                llm_kwargs["api_key"] = api_key
-            self.deep_thinking_llm = ChatOpenAI(**llm_kwargs)
-            llm_kwargs["model"] = self.config["quick_think_llm"]
-            self.quick_thinking_llm = ChatOpenAI(**llm_kwargs)
-        elif provider == "anthropic":
-            llm_kwargs = {
-                "model": self.config["deep_think_llm"],
-                "base_url": self.config["backend_url"],
-            }
-            if api_key:
-                llm_kwargs["anthropic_api_key"] = api_key
-            self.deep_thinking_llm = ChatAnthropic(**llm_kwargs)
-            llm_kwargs["model"] = self.config["quick_think_llm"]
-            self.quick_thinking_llm = ChatAnthropic(**llm_kwargs)
-        elif provider == "google":
-            llm_kwargs = {"model": self.config["deep_think_llm"]}
-            if api_key:
-                llm_kwargs["google_api_key"] = api_key
-            self.deep_thinking_llm = ChatGoogleGenerativeAI(**llm_kwargs)
-            llm_kwargs["model"] = self.config["quick_think_llm"]
-            self.quick_thinking_llm = ChatGoogleGenerativeAI(**llm_kwargs)
+        # Check if we should use the new provider layer
+        use_new_provider = self.config.get("use_new_llm_provider", False)
+
+        if use_new_provider:
+            # Use the new provider abstraction layer with direct API calls
+            self.deep_thinking_llm = create_llm_provider(
+                provider=provider,
+                model=self.config["deep_think_llm"],
+                api_key=api_key,
+                base_url=self.config.get("backend_url"),
+            )
+            self.quick_thinking_llm = create_llm_provider(
+                provider=provider,
+                model=self.config["quick_think_llm"],
+                api_key=api_key,
+                base_url=self.config.get("backend_url"),
+            )
         else:
-            raise ValueError(f"Unsupported LLM provider: {provider}")
+            # Use legacy LangChain approach
+            if provider in ("openai", "ollama", "openrouter", "custom"):
+                llm_kwargs = {
+                    "model": self.config["deep_think_llm"],
+                    "base_url": self.config["backend_url"],
+                }
+                if api_key:
+                    llm_kwargs["api_key"] = api_key
+                self.deep_thinking_llm = ChatOpenAI(**llm_kwargs)
+                llm_kwargs["model"] = self.config["quick_think_llm"]
+                self.quick_thinking_llm = ChatOpenAI(**llm_kwargs)
+            elif provider == "anthropic":
+                llm_kwargs = {
+                    "model": self.config["deep_think_llm"],
+                    "base_url": self.config["backend_url"],
+                }
+                if api_key:
+                    llm_kwargs["anthropic_api_key"] = api_key
+                self.deep_thinking_llm = ChatAnthropic(**llm_kwargs)
+                llm_kwargs["model"] = self.config["quick_think_llm"]
+                self.quick_thinking_llm = ChatAnthropic(**llm_kwargs)
+            elif provider == "google":
+                llm_kwargs = {"model": self.config["deep_think_llm"]}
+                if api_key:
+                    llm_kwargs["google_api_key"] = api_key
+                self.deep_thinking_llm = ChatGoogleGenerativeAI(**llm_kwargs)
+                llm_kwargs["model"] = self.config["quick_think_llm"]
+                self.quick_thinking_llm = ChatGoogleGenerativeAI(**llm_kwargs)
+            else:
+                raise ValueError(f"Unsupported LLM provider: {provider}")
         
         # Initialize memories
         self.bull_memory = FinancialSituationMemory("bull_memory", self.config)
